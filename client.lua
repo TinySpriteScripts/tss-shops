@@ -33,7 +33,7 @@ CreateThread(function()
                                     options = {{icon = "fas fa-comment-dots",label = "Talk",action = function() OpenShopMenu(k,v.Products) end,},},
                                     distance = 2.5,
                                 })
-                                DebugCode("Ped Made For Shop "..tostring(k).." At Coords "..tostring(j.Coords))
+                                debugPrint("Ped Made For Shop "..tostring(k).." At Coords "..tostring(j.Coords))
                             end
                         else
                             TargetZone["Shop"..k..d] =
@@ -41,7 +41,7 @@ CreateThread(function()
 	                        	options = {{icon = v.Icon,label = "Talk",action = function() OpenShopMenu(k,v.Products) end,},},
 	                        	distance = 2.5,
 	                        })
-                            DebugCode("BoxZone Made For Shop "..tostring(k).." At Coords "..tostring(j.Coords))
+                            debugPrint("BoxZone Made For Shop "..tostring(k).." At Coords "..tostring(j.Coords))
                         end
                         if j.ShowBlip then
                             blip = AddBlipForCoord(j.Coords)
@@ -84,7 +84,7 @@ CreateThread(function()
                         SetEntityHeading(VendMachine["Vend"..k..d], j.Coords.w)
                         FreezeEntityPosition(VendMachine["Vend"..k..d], true)
                         SetEntityAsMissionEntity(VendMachine["Vend"..k..d])
-                        DebugCode("PropMadeFor Vending Machine: "..tostring(k))
+                        debugPrint("PropMadeFor Vending Machine: "..tostring(k))
                     end
                 end
             end
@@ -131,131 +131,82 @@ function OpenVendingMachine(machine,products)
             }
             table.insert(columns,item)
         else
-            DebugCode("^2SAYER-SHOPS^7:Cannot Find ^4"..v.name.." ^7in ^4Shared/Items.lua")
+            debugPrint("^2SAYER-SHOPS^7:Cannot Find ^4"..v.name.." ^7in ^4Shared/Items.lua")
         end
     end
     exports['qb-menu']:openMenu(columns)
 end
 
 function OpenShopMenu(shop,products)
-    local OP = Config.Shops[shop]
-    local TAB = Config.Products[products]
-    local Job = QBCore.Functions.GetPlayerData().job.name
-    local issell = nil
-    local shopimage = "<img src=nui://"..Config.ShopLogoLink..shop..".png width=35px style='margin-right: 10px'> "
-    local columns = {
-        {
-            header = shopimage,
-            text = OP.Label,
-            isMenuHeader = true,
-        },
-    }
-    for k, v in ipairs(TAB) do
-        if QBCore.Shared.Items[v.name] ~= nil then
-            local item = {}
-            item.header = QBCore.Shared.Items[v.name].label
-            if Config.ShowImages then
-                item.icon = v.name
-            end
-            local text = ""
-            if v.cansell then
-                text = text .. "Buy For $" .. v.price .. "</br>Sell For $" .. v.cansell.Price .. "<br>"
-                issell = v.cansell
-            else
-                text = text .. "Buy For $" .. v.price .. " "
-                issell = nil
-            end
-            item.text = text
-            item.params = {
-                event = 'sayer-shops:PurchaseMenu',
-                args = {
-                    type = v.name,
-                    sell = issell,
-                    price = v.price,
-                    job = v.requiredJob,
-                    gang = v.requiredGang,
-                    license = v.requiresLicense,
-                }
+    -- client
+    local items = {}
+    for _,prod in ipairs(Config.Products[products]) do
+        local itm = QBCore.Shared.Items[prod.name]
+        if itm then
+            items[#items+1] = {
+                name = prod.name,
+                label = itm.label,
+                price = prod.price,
+                icon = ("nui://qb-inventory/html/images/%s.png"):format(prod.name) -- or any URL/path you prefer
             }
-            table.insert(columns, item)
-        else
-            DebugCode("^2SAYER-SHOPS^7:Cannot Find ^4"..v.name.." ^7in ^4Shared/Items.lua")
         end
     end
 
-    exports['qb-menu']:openMenu(columns)
+    local logoValue = nil
+
+    SetNuiFocus(true, true)
+    if Config.Shops[shop]?.shopLogo then
+        logoValue = "nui://tss-shops/html/images/"..Config.Shops[shop].shopLogo
+    end
+    SendNUIMessage({
+        action = 'openShop',
+        payload = {
+            shopLabel = Config.Shops[shop].Label,
+            shopSubtitle = 'Browse & add to basket',
+            shopLogo = logoValue, -- optional
+            items = items,
+            balances = {
+                cash = QBCore.Functions.GetPlayerData().money['cash'] or 0,
+                bank = QBCore.Functions.GetPlayerData().money['bank'] or 0,
+            },
+            defaultAccount = 'cash'
+        }
+    })
+
 end
 
-RegisterNetEvent("sayer-shops:PurchaseMenu", function(args)
-    local delmenu = nil
-    if args.sell then
-        delmenu = exports['qb-input']:ShowInput({
-            header = "> "..QBCore.Shared.Items[args.type].label.." <",
-	    	submitText = "Complete!",
-            inputs = {
-                {
-                    text = "Amount(#)",    
-                    name = "amount",    
-                    type = "number",    
-                    isRequired = true  
-                },
-                {
-                    text = "Cash/Bank(#)",    
-                    name = "account",    
-                    type = "radio",    
-                    isRequired = true,
-                    options = {
-                        { value = "cash", text = "Cash" }, 
-                        { value = "bank", text = "Bank" },
-                        { value = "business", text = "Business Account" },
-                    },
-                },
-                {
-                    text = "Sell!",        
-                    name = "sell",      
-                    type = "radio",     
-                    isRequired = true,
-                    options = {
-                        { value = "true", text = "Yes" }, 
-                        { value = "false", text = "No" },
-                    },
-                },
-            }
-        })
-    else
-        delmenu = exports['qb-input']:ShowInput({
-            header = "> "..QBCore.Shared.Items[args.type].label.." <",
-            submitText = "Buy!",
-            inputs = {
-                {
-                    text = "Amount(#)",    
-                    name = "amount",    
-                    type = "number",    
-                    isRequired = true  
-                },
-                {
-                    text = "Cash/Bank/Business(#)",    
-                    name = "account",    
-                    type = "radio",    
-                    isRequired = true,
-                    options = {
-                        { value = "cash", text = "Cash" }, 
-                        { value = "bank", text = "Bank" },
-                        { value = "business", text = "Business Account" },
-                    },
-                },
-            }
-        })
-    end
-    if delmenu ~= nil then
-        if delmenu.amount == nil or delmenu.account == nil then return DebugCode("DELMENU NIL") end
-        if delmenu.sell ~= nil and delmenu.sell  == 'true' then
-            TriggerEvent("sayer-shops:ProcessItem",args.type,tonumber(delmenu.amount),args.sell.Price,delmenu.account,args.job,args.gang,args.license,false)
-        else
-            TriggerEvent("sayer-shops:ProcessItem",args.type,tonumber(delmenu.amount),args.price,delmenu.account,args.job,args.gang,args.license,true)
-        end
-    end
+-- client
+RegisterNUICallback('close', function(_, cb)
+    SetNuiFocus(false, false)
+    cb({})
 end)
+
+RegisterNUICallback('checkFunds', function(data, cb)
+    local total = tonumber(data.total or 0)
+    local account = data.account or 'cash'
+    QBCore.Functions.TriggerCallback('sayer-shops:CheckMoney', function(ok)
+        local PD = QBCore.Functions.GetPlayerData()
+        local cash = PD.money['cash'] or 0
+        local bank = PD.money['bank'] or 0
+        if ok then
+            print("has enough money")
+            cb({ ok = true, cash = cash, bank = bank })
+        else
+            print("DOES NOT have enough money")
+            cb({ ok = false, reason = 'Insufficient funds', cash = cash, bank = bank })
+        end
+    end, total, account)
+end)
+
+RegisterNUICallback('purchaseBasket', function(data, cb)
+    -- data.items = [{ name, label, price, qty }], data.account
+    -- You SHOULD NOT trust price from client; reprice server-side.
+    TriggerServerEvent('sayer-shops:PurchaseBasket', data.account, data.items)
+    -- Optionally wait for a server -> client event to confirm,
+    -- then respond true/false. For a simple flow:
+    cb({ ok = true })
+end)
+
 
 function SellItem(item,amount,worth,acc)
     if not IsBusy then
@@ -312,9 +263,9 @@ end
 RegisterNetEvent('sayer-shops:ProcessItem', function(item, amount, worth, acc, job, gang, license, isBuying)
     local fullworth = math.ceil(worth * amount)
     local Job = QBCore.Functions.GetPlayerData().job.name
-    DebugCode("Job = " .. Job)
+    debugPrint("Job = " .. Job)
     local Gang = QBCore.Functions.GetPlayerData().gang.name
-    DebugCode("Gang = " .. Gang)
+    debugPrint("Gang = " .. Gang)
     local licenseTable = QBCore.Functions.GetPlayerData().metadata['licences']
 
     local hasJob = false
@@ -323,7 +274,7 @@ RegisterNetEvent('sayer-shops:ProcessItem', function(item, amount, worth, acc, j
 
     if job then
         for k, v in pairs(job) do
-            DebugCode("Job Required = " .. v)
+            debugPrint("Job Required = " .. v)
             if Job == v then
                 hasJob = true
                 break
@@ -335,7 +286,7 @@ RegisterNetEvent('sayer-shops:ProcessItem', function(item, amount, worth, acc, j
 
     if gang then
         for k, v in pairs(gang) do
-            DebugCode("Gang Required = " .. v)
+            debugPrint("Gang Required = " .. v)
             if Gang == v then
                 hasGang = true
                 break
@@ -372,14 +323,6 @@ RegisterNetEvent('sayer-shops:ProcessItem', function(item, amount, worth, acc, j
         end
     end
 end)
-
---debug function
-
-function DebugCode(msg)
-    if Config.DebugCode then
-        print(msg)
-    end
-end
 
 --used to reset peds/zones when restarting script
 AddEventHandler('onResourceStop', function(t) if t ~= GetCurrentResourceName() then return end

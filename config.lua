@@ -1,5 +1,14 @@
-Config = {}
-Config.DebugCode = true
+Config = {
+    System = {
+        Debug = true,            -- set true to view target/ped areas
+        Menu = "ox",            -- "qb", "ox"
+        Notify = "ox",            -- "qb", "ox", "esx, "okok", "gta"
+        ProgressBar = "ox",     -- "qb", "ox"
+    },
+    Crafting = { --only here for bridge support
+        showItemBox = true,--will only show if your inventory supports it
+    },
+}
 Config.DebugPoly = false
 Config.UsePeds = true
 Config.CombineBlips = false --used to display shop blips as "Shop" to lower blip count
@@ -9,8 +18,6 @@ Config.Webhooks = {
     URL = "https://discord.com/api/webhooks/1070875071113080862/oXKGTB1WlxI_QVTPkuIfjUQuaOSWkQkH6vwb7I6gT4vMhZV32c8ItDeJYFSkgvsLsRXy", --change me to your discord webhook
 }
 
-Config.ShopLogoLink = 'sayer-shops/images/shops/' --used for images in menu
-
 Config.Shops = {
     ['247'] = {
         Enable = true,
@@ -18,6 +25,7 @@ Config.Shops = {
         Products = '24hours',
         Icon = "fas fa-comment-dots",
         Blip = {Sprite = 52,Colour = 0,Label = "24/7"},
+        shopLogo = "247.png",
         Locations = {
             {Coords = vector4(24.47, -1346.62, 29.5, 271.66),       Ped = 's_f_y_sweatshop_01',ShowBlip = true},
             {Coords = vector4(-3039.54, 584.38, 7.91, 17.27),       Ped = 's_f_y_sweatshop_01',ShowBlip = true},
@@ -132,7 +140,7 @@ Config.Shops = {
         },
     },
     ['burgershot'] = {
-        Enable = true,
+        Enable = false,
         Label = "Burgershot",
         Products = 'burgershot',
         Icon = "fas fa-comment-dots",

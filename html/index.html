@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sayer Shop</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Root overlay -->
+  <div id="shop-root" class="hidden">
+    <div class="shop-wrap">
+      <!-- Header -->
+      <header class="shop-header">
+        <div class="shop-header-left">
+          <img id="shop-logo" class="shop-logo" alt="Shop" />
+          <div class="shop-title">
+            <h1 id="shop-label">Shop</h1>
+            <p id="shop-subtitle">Welcome!</p>
+          </div>
+        </div>
+
+        <div class="balances">
+          <div class="balance">
+            <span class="balance-label">Cash</span>
+            <span id="bal-cash" class="balance-value">$0</span>
+          </div>
+          <div class="balance">
+            <span class="balance-label">Bank</span>
+            <span id="bal-bank" class="balance-value">$0</span>
+          </div>
+          <div class="account-select">
+            <label><input type="radio" name="account" value="cash" checked /> Cash</label>
+            <label><input type="radio" name="account" value="bank" /> Bank</label>
+            <label><input type="radio" name="account" value="business" /> Business</label>
+          </div>
+        </div>
+
+        <button id="btn-close" class="btn btn-ghost" aria-label="Close">✕</button>
+      </header>
+
+      <!-- Main content -->
+      <main class="shop-main">
+        <!-- Items grid -->
+        <section class="items-panel">
+          <div id="items-grid" class="items-grid">
+            <!-- cards injected by JS -->
+          </div>
+        </section>
+
+        <!-- Basket -->
+        <aside class="basket-panel">
+          <div class="basket-header">
+            <h2>Basket</h2>
+            <button id="basket-clear" class="btn btn-ghost-sm" title="Clear basket">Clear</button>
+          </div>
+
+          <div id="basket-list" class="basket-list">
+            <!-- basket rows injected by JS -->
+          </div>
+
+          <div class="basket-footer">
+            <div class="totals">
+              <div class="row">
+                <span>Subtotal</span>
+                <strong id="subtotal">$0</strong>
+              </div>
+              <div class="row grand">
+                <span>Total</span>
+                <strong id="grandtotal">$0</strong>
+              </div>
+            </div>
+
+            <button id="btn-purchase" class="btn btn-primary" disabled>Purchase</button>
+            <p id="status" class="status" role="status"></p>
+          </div>
+        </aside>
+      </main>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
