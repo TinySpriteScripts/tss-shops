@@ -2,80 +2,116 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Sayer Shop</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TSS Shops</title>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
-  <!-- Root overlay -->
-  <div id="shop-root" class="hidden">
-    <div class="shop-wrap">
-      <!-- Header -->
-      <header class="shop-header">
-        <div class="shop-header-left">
-          <img id="shop-logo" class="shop-logo" alt="Shop" />
-          <div class="shop-title">
-            <h1 id="shop-label">Shop</h1>
-            <p id="shop-subtitle">Welcome!</p>
+<body class="theme-dark">
+  <div id="shop-root" class="app hidden">
+    <div class="app-container">
+      <aside class="sidebar">
+        <div>
+          <div class="brand">
+            <div class="brand-dot"></div>
+            <div class="brand-main">
+              <div class="brand-title-row">
+                <h1 id="shop-label">Shop</h1>
+                <button id="themeToggle" class="theme-icon-btn" type="button" aria-label="Dark Mode">☾</button>
+              </div>
+              <p id="shop-subtitle">Browse items and checkout.</p>
+              <p id="shop-meta" class="meta-line">Basket is ready</p>
+            </div>
+          </div>
+
+          <div class="logo-box">
+            <img id="shop-logo" class="shop-logo" alt="Shop logo" />
+          </div>
+
+          <div class="panel">
+            <h3>Wallet</h3>
+            <div class="balances">
+              <div class="row-item"><span>Cash</span><strong id="bal-cash">$0</strong></div>
+              <div class="row-item"><span>Bank</span><strong id="bal-bank">$0</strong></div>
+              <div id="business-row" class="row-item hidden"><span>Business</span><strong id="bal-business">$0</strong></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>Pay With</h3>
+            <div id="account-select" class="account-select"></div>
+          </div>
+
+          <div class="panel">
+            <h3>Catalog</h3>
+            <div class="stack">
+              <input id="search-input" type="text" placeholder="Search items" autocomplete="off" />
+              <select id="sort-select">
+                <option value="name_asc">Name A-Z</option>
+                <option value="name_desc">Name Z-A</option>
+                <option value="price_asc">Price Low-High</option>
+                <option value="price_desc">Price High-Low</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div class="balances">
-          <div class="balance">
-            <span class="balance-label">Cash</span>
-            <span id="bal-cash" class="balance-value">$0</span>
-          </div>
-          <div class="balance">
-            <span class="balance-label">Bank</span>
-            <span id="bal-bank" class="balance-value">$0</span>
-          </div>
-          <div class="account-select">
-            <label><input type="radio" name="account" value="cash" checked /> Cash</label>
-            <label><input type="radio" name="account" value="bank" /> Bank</label>
-            <label><input type="radio" name="account" value="business" /> Business</label>
-          </div>
+        <div class="sidebar-actions">
+          <button id="basket-clear" class="ghost-btn" type="button">Clear Basket</button>
+          <button id="btn-close" class="danger-btn" type="button">Close</button>
         </div>
+      </aside>
 
-        <button id="btn-close" class="btn btn-ghost" aria-label="Close">✕</button>
-      </header>
-
-      <!-- Main content -->
-      <main class="shop-main">
-        <!-- Items grid -->
-        <section class="items-panel">
-          <div id="items-grid" class="items-grid">
-            <!-- cards injected by JS -->
+      <main class="main">
+        <section class="items-panel card">
+          <div class="header-row">
+            <h2>Available Items</h2>
+            <span id="items-count" class="pill">0 items</span>
           </div>
+          <div id="items-grid" class="items-grid"></div>
         </section>
 
-        <!-- Basket -->
-        <aside class="basket-panel">
-          <div class="basket-header">
+        <aside class="basket-panel card">
+          <div class="header-row basket-head">
             <h2>Basket</h2>
-            <button id="basket-clear" class="btn btn-ghost-sm" title="Clear basket">Clear</button>
+            <span id="basket-lines" class="pill">0 lines</span>
           </div>
-
-          <div id="basket-list" class="basket-list">
-            <!-- basket rows injected by JS -->
-          </div>
+          <div id="basket-list" class="basket-list"></div>
 
           <div class="basket-footer">
             <div class="totals">
-              <div class="row">
-                <span>Subtotal</span>
-                <strong id="subtotal">$0</strong>
-              </div>
-              <div class="row grand">
-                <span>Total</span>
-                <strong id="grandtotal">$0</strong>
-              </div>
+              <div class="row-item"><span>Quantity</span><strong id="itemcount">0</strong></div>
+              <div class="row-item total"><span>Total</span><strong id="grandtotal">$0</strong></div>
             </div>
-
-            <button id="btn-purchase" class="btn btn-primary" disabled>Purchase</button>
+            <button id="btn-purchase" class="accent-btn" type="button" disabled>Purchase</button>
             <p id="status" class="status" role="status"></p>
           </div>
         </aside>
       </main>
+    </div>
+  </div>
+
+  <div id="vending-root" class="app hidden">
+    <div class="vending-container">
+      <section class="vending-main card">
+        <div class="header-row">
+          <div>
+            <h2 id="vending-title">Vending Machine</h2>
+            <p id="vending-subtitle" class="meta-line">Select an item to purchase.</p>
+          </div>
+          <button id="vending-close" class="danger-btn" type="button">Close</button>
+        </div>
+
+        <div id="vending-grid" class="vending-grid"></div>
+      </section>
+
+      <aside class="vending-selection card">
+        <h3>Selected Item</h3>
+        <img id="vending-selected-image" class="vending-selected-image" alt="Selected item" />
+        <p id="vending-selected-name" class="vending-selected-name">None selected</p>
+        <p id="vending-selected-price" class="vending-selected-price">$0</p>
+        <button id="vending-purchase" class="accent-btn" type="button" disabled>Purchase</button>
+        <p id="vending-status" class="status" role="status"></p>
+      </aside>
     </div>
   </div>
 

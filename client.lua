@@ -106,39 +106,38 @@ end)
 
 function OpenVendingMachine(machine,products)
     if not Config.VendingMachines[machine] then return end
-    local columns = {
-        {
-            header = Config.VendingMachines[machine].Label,
-            isMenuHeader = true,
-        }
-    }
-    for k,v in ipairs(products) do
+
+    local items = {}
+    for _,v in ipairs(products) do
         if QBCore.Shared.Items[v.name] ~= nil then
-            local item = {}
-            item.header = QBCore.Shared.Items[v.name].label
-            local text = "Price: $"
-            item.text = text..v.price
-            if Config.ShowImages then
-                item.icon = v.name
-            end
-            item.params = {
-                event = "sayer-shops:Vend:BuyItem",
-                isServer = true,
-                args = {
-                    item = v.name,
-                    price = v.price,
-                }
+            items[#items+1] = {
+                name = v.name,
+                label = QBCore.Shared.Items[v.name].label,
+                price = v.price,
+                icon = ("nui://qb-inventory/html/images/%s.png"):format(v.name)
             }
-            table.insert(columns,item)
         else
             debugPrint("^2SAYER-SHOPS^7:Cannot Find ^4"..v.name.." ^7in ^4Shared/Items.lua")
         end
     end
-    exports['qb-menu']:openMenu(columns)
+
+    SetNuiFocus(true, true)
+    SendNUIMessage({
+        action = 'openVending',
+        payload = {
+            machineId = machine,
+            label = Config.VendingMachines[machine].Label or 'Vending Machine',
+            subtitle = 'Select an item to purchase',
+            items = items,
+        }
+    })
 end
 
 function OpenShopMenu(shop,products)
-    -- client
+    if not Config.Shops[shop] or not Config.Products[products] then
+        return
+    end
+
     local items = {}
     for _,prod in ipairs(Config.Products[products]) do
         local itm = QBCore.Shared.Items[prod.name]
@@ -153,22 +152,33 @@ function OpenShopMenu(shop,products)
     end
 
     local logoValue = nil
+    local playerData = QBCore.Functions.GetPlayerData()
+    local balances = {
+        cash = playerData.money['cash'] or 0,
+        bank = playerData.money['bank'] or 0,
+        business = 0,
+    }
+    local accounts = { 'cash', 'bank' }
 
     SetNuiFocus(true, true)
-    if Config.Shops[shop]?.shopLogo then
+    if Config.Shops[shop].shopLogo then
         logoValue = "nui://tss-shops/html/images/"..Config.Shops[shop].shopLogo
     end
+
+    if playerData.job and playerData.job.isboss == true then
+        accounts[#accounts+1] = 'business'
+    end
+
     SendNUIMessage({
         action = 'openShop',
         payload = {
+            shopId = shop,
             shopLabel = Config.Shops[shop].Label,
-            shopSubtitle = 'Browse & add to basket',
-            shopLogo = logoValue, -- optional
+            shopSubtitle = 'Browse items and checkout',
+            shopLogo = logoValue,
             items = items,
-            balances = {
-                cash = QBCore.Functions.GetPlayerData().money['cash'] or 0,
-                bank = QBCore.Functions.GetPlayerData().money['bank'] or 0,
-            },
+            balances = balances,
+            accounts = accounts,
             defaultAccount = 'cash'
         }
     })
@@ -184,27 +194,28 @@ end)
 RegisterNUICallback('checkFunds', function(data, cb)
     local total = tonumber(data.total or 0)
     local account = data.account or 'cash'
-    QBCore.Functions.TriggerCallback('sayer-shops:CheckMoney', function(ok)
-        local PD = QBCore.Functions.GetPlayerData()
-        local cash = PD.money['cash'] or 0
-        local bank = PD.money['bank'] or 0
-        if ok then
-            print("has enough money")
-            cb({ ok = true, cash = cash, bank = bank })
-        else
-            print("DOES NOT have enough money")
-            cb({ ok = false, reason = 'Insufficient funds', cash = cash, bank = bank })
-        end
+    QBCore.Functions.TriggerCallback('sayer-shops:CheckMoney', function(result)
+        cb(result or { ok = false, reason = 'Unable to check funds.' })
     end, total, account)
 end)
 
 RegisterNUICallback('purchaseBasket', function(data, cb)
-    -- data.items = [{ name, label, price, qty }], data.account
-    -- You SHOULD NOT trust price from client; reprice server-side.
-    TriggerServerEvent('sayer-shops:PurchaseBasket', data.account, data.items)
-    -- Optionally wait for a server -> client event to confirm,
-    -- then respond true/false. For a simple flow:
-    cb({ ok = true })
+    QBCore.Functions.TriggerCallback('sayer-shops:PurchaseBasket', function(result)
+        cb(result or { ok = false, reason = 'Purchase failed.' })
+    end, {
+        shopId = data.shopId,
+        account = data.account,
+        items = data.items
+    })
+end)
+
+RegisterNUICallback('purchaseVendingItem', function(data, cb)
+    QBCore.Functions.TriggerCallback('sayer-shops:PurchaseVending', function(result)
+        cb(result or { ok = false, reason = 'Purchase failed.' })
+    end, {
+        machineId = data.machineId,
+        itemName = data.itemName
+    })
 end)
 
 
