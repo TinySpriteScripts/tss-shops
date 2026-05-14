@@ -949,8 +949,8 @@ local Colors = { -- https://www.spycolor.com/
     ["lightgreen"] = 65309,
 }
 function SendDiscordMessage(title,message,color)
-    if not Config.Webhooks.Enable then return end
-    local webhookUrl = Config.Webhooks.URL
+    if not Config.EnableWebhooks then return end
+    local webhookUrl = ""
     if not webhookUrl or webhookUrl == "" or webhookUrl == "CHANGEME" then return end
     local embedData = {
         {

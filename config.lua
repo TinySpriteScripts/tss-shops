@@ -13,6 +13,7 @@ Config.DebugPoly = false
 Config.UsePeds = true
 Config.CombineBlips = false --used to display shop blips as "Shop" to lower blip count
 Config.ShowImages = true
+Config.EnableWebhooks = true -- configure in server.lua
 
 Config.Shops = {
     ['247'] = {
