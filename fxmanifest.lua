@@ -1,8 +1,8 @@
 fx_version 'cerulean'
 game 'gta5'
 
-author 'oosayeroo'
-description 'sayer-shops'
+author 'TinySprite Scripts (TSS)'
+description 'tss-shops'
 version '2.0.0'
 
 shared_scripts { 

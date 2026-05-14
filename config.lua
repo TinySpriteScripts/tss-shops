@@ -1,6 +1,6 @@
 Config = {
     System = {
-        Debug = true,            -- set true to view target/ped areas
+        Debug = false,            -- set true to view target/ped areas
         Menu = "ox",            -- "qb", "ox"
         Notify = "ox",            -- "qb", "ox", "esx, "okok", "gta"
         ProgressBar = "ox",     -- "qb", "ox"
@@ -13,16 +13,13 @@ Config.DebugPoly = false
 Config.UsePeds = true
 Config.CombineBlips = false --used to display shop blips as "Shop" to lower blip count
 Config.ShowImages = true
-Config.Webhooks = {
-    Enable = false,
-    URL = "https://discord.com/api/webhooks/1070875071113080862/oXKGTB1WlxI_QVTPkuIfjUQuaOSWkQkH6vwb7I6gT4vMhZV32c8ItDeJYFSkgvsLsRXy", --change me to your discord webhook
-}
 
 Config.Shops = {
     ['247'] = {
         Enable = true,
         Label = "24/7",
         Products = '24hours',
+        SellPercent = 50, -- default % of buy price paid when selling items back to this shop
         Icon = "fas fa-comment-dots",
         Blip = {Sprite = 52,Colour = 0,Label = "24/7"},
         shopLogo = "247.png",
@@ -177,30 +174,30 @@ Config.Shops = {
 -- [1] = numbers must be in order
 -- name = itemcode
 -- price = price of item when buying
--- cansell = { --only include if you want the item to be sold back
-    -- Price -- price item is sold for
-    --}
+-- stock = starting shop stock. Leave nil for unlimited stock
+-- canSell = true to allow players to sell this item to shops using this product list
+-- sellPercent = optional % of buy price paid when selling. Overrides shop SellPercent
 -- requiredJob = can be single job { 'mechanic' } or multiple like { 'mechanic', 'police' }
 -- requiredGang = same as job but with gang codes
 -- requiresLicense = must be the license code needed to purchase
 
 Config.Products = {
     ['24hours'] = {
-        [1] = {name = "tosti",              price = 2,        },
-        [2] = {name = "water_bottle",       price = 2,        },
-        [3] = {name = "cola",               price = 2,        },
-        [4] = {name = "twerks_candy",       price = 2,        },
-        [5] = {name = "snikkel_candy",      price = 2,        },
-        [6] = {name = "sandwich",           price = 2,        },
-        [7] = {name = "beer",               price = 7,        cansell = {Price = 5},},
-        [8] = {name = "whiskey",            price = 10,       cansell = {Price = 5},},
-        [9] = {name = "vodka",              price = 12,       cansell = {Price = 5},},
-        [10] = {name = "bandage",           price = 100,      cansell = {Price = 5},},
-        [11] = {name = "lighter",           price = 2,        },
-        [12] = {name = "rolling_paper",     price = 2,        },
-        [13] = {name = "ticket1",           price = 10,        },
-        [14] = {name = "ticket2",           price = 20,        },
-        [15] = {name = "ticket3",           price = 50,        },
+        [1] = {name = "tosti",              price = 2,        stock = 80, },
+        [2] = {name = "water_bottle",       price = 2,        stock = 120, canSell = true, },
+        [3] = {name = "cola",               price = 2,        stock = 120, canSell = true, },
+        [4] = {name = "twerks_candy",       price = 2,        stock = 75, canSell = true, },
+        [5] = {name = "snikkel_candy",      price = 2,        stock = 75, canSell = true, },
+        [6] = {name = "sandwich",           price = 2,        stock = 80, },
+        [7] = {name = "beer",               price = 7,        stock = 45, canSell = true, sellPercent = 65, },
+        [8] = {name = "whiskey",            price = 10,       stock = 35, canSell = true, sellPercent = 60, },
+        [9] = {name = "vodka",              price = 12,       stock = 35, canSell = true, sellPercent = 60, },
+        [10] = {name = "bandage",           price = 100,      stock = 30, canSell = true, sellPercent = 35, },
+        [11] = {name = "lighter",           price = 2,        stock = 60, },
+        [12] = {name = "rolling_paper",     price = 2,        stock = 60, },
+        [13] = {name = "ticket1",           price = 10,       stock = 50, },
+        [14] = {name = "ticket2",           price = 20,       stock = 50, },
+        [15] = {name = "ticket3",           price = 50,       stock = 50, },
     },
     ["burgershot"] = {
         [1] = {name = "milkshake",          price = 7,        },
@@ -278,9 +275,9 @@ Config.Products = {
     ["gearshop"] = {
         [1] = {name = "diving_gear",        price = 2500,   cansell = {Price = 5}, },
         [2] = {name = "jerry_can",          price = 200,    },
-        [2] = {name = "parachute",          price = 200,    },
-        [2] = {name = "binoculars",         price = 200,    },
-        [2] = {name = "diving_fill",        price = 200,    },
+        [3] = {name = "parachute",          price = 200,    },
+        [4] = {name = "binoculars",         price = 200,    },
+        [5] = {name = "diving_fill",        price = 200,    },
     },
     ["ammunation"] = {
         [1] = {name = "weapon_knife",       price = 250,    },

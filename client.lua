@@ -2,67 +2,110 @@ local QBCore = exports['qb-core']:GetCoreObject()
 local PlayerData = {}
 TargetPed = {}
 TargetZone = {}
+TargetBlip = {}
 VendMachine = {}
 
 local IsBusy = false
 
 -- Functions
 
+local function RemoveShopTargets(shop)
+    for key, entity in pairs(TargetPed) do
+        if key:sub(1, 5 + #shop) == "Ped:"..shop..":" then
+            exports['qb-target']:RemoveTargetEntity(entity)
+            if DoesEntityExist(entity) then
+                DeleteEntity(entity)
+            end
+            TargetPed[key] = nil
+        end
+    end
+
+    for key in pairs(TargetZone) do
+        if key:sub(1, 6 + #shop) == "Shop:"..shop..":" then
+            exports['qb-target']:RemoveZone(key)
+            TargetZone[key] = nil
+        end
+    end
+
+    for key, blip in pairs(TargetBlip) do
+        if key:sub(1, 6 + #shop) == "Blip:"..shop..":" then
+            if DoesBlipExist(blip) then
+                RemoveBlip(blip)
+            end
+            TargetBlip[key] = nil
+        end
+    end
+end
+
+local function CreateShopTargets(shop, data)
+    if not data or data.Enable == false or not data.Locations then
+        return
+    end
+
+    RemoveShopTargets(shop)
+
+    for d,j in pairs(data.Locations) do
+        if Config.UsePeds then
+            if j.Ped ~= nil then
+                local model = j.Ped
+                RequestModel(model)
+                while not HasModelLoaded(model) do
+                    Wait(0)
+                end
+
+                local entity = CreatePed(0, model, j.Coords.x,j.Coords.y,j.Coords.z-1,j.Coords.w, false, false)
+                SetEntityInvincible(entity,true)
+                FreezeEntityPosition(entity,true)
+                SetBlockingOfNonTemporaryEvents(entity,true)
+                TargetPed["Ped:"..shop..":"..d] = entity
+                exports['qb-target']:AddTargetEntity(entity,{
+                    options = {{icon = "fas fa-comment-dots",label = "Talk",action = function() OpenShopMenu(shop,data.Products) end,},},
+                    distance = 2.5,
+                })
+                debugPrint("Ped Made For Shop "..tostring(shop).." At Coords "..tostring(j.Coords))
+            end
+        else
+            TargetZone["Shop:"..shop..":"..d] =
+            exports['qb-target']:AddBoxZone("Shop:"..shop..":"..d, j.Coords, 4.0, 4.0, {name = "Shop:"..shop..":"..d,heading = j.Coords.w,debugPoly = Config.DebugPoly,minZ=j.Coords.z-2,maxZ=j.Coords.z+2,}, {
+                options = {{icon = data.Icon,label = "Talk",action = function() OpenShopMenu(shop,data.Products) end,},},
+                distance = 2.5,
+            })
+            debugPrint("BoxZone Made For Shop "..tostring(shop).." At Coords "..tostring(j.Coords))
+        end
+        if j.ShowBlip and data.Blip then
+            local blip = AddBlipForCoord(j.Coords)
+            SetBlipAsShortRange(blip, true)
+            SetBlipSprite(blip, data.Blip.Sprite)
+            SetBlipColour(blip, data.Blip.Colour or data.Blip.Color or 0)
+            SetBlipScale(blip, 0.8)
+            SetBlipDisplay(blip, 6)
+            BeginTextCommandSetBlipName('STRING')
+            if not Config.CombineBlips then
+                if data.Blip.Label then AddTextComponentString(data.Blip.Label)
+                else AddTextComponentString("Shop") end
+            else
+                AddTextComponentString("Shop")
+            end
+            EndTextCommandSetBlipName(blip)
+            TargetBlip["Blip:"..shop..":"..d] = blip
+        end
+    end
+end
+
+local function OpenRegisteredShop(shop)
+    local shopData = Config.Shops[shop]
+    if not shopData then
+        QBCore.Functions.Notify('Shop not found.', 'error')
+        return false
+    end
+
+    OpenShopMenu(shop, shopData.Products)
+    return true
+end
+
 CreateThread(function()
     for k,v in pairs(Config.Shops) do
-        if v ~= nil then
-            if v.Enable then
-                if v.Locations then
-                    for d,j in pairs(v.Locations) do
-                        if Config.UsePeds then
-                            if j.Ped ~= nil then
-                                local model = ''
-                                local entity = ''
-                                model = j.Ped
-                                RequestModel(model)
-                                while not HasModelLoaded(model) do
-                                  Wait(0)
-                                end
-                            
-                                entity = CreatePed(0, model, j.Coords.x,j.Coords.y,j.Coords.z-1,j.Coords.w, false, false)
-                                SetEntityInvincible(entity,true)
-                                FreezeEntityPosition(entity,true)
-                                SetBlockingOfNonTemporaryEvents(entity,true)
-                                TargetPed["Ped"..k..d] = 
-                                exports['qb-target']:AddTargetEntity(entity,{
-                                    options = {{icon = "fas fa-comment-dots",label = "Talk",action = function() OpenShopMenu(k,v.Products) end,},},
-                                    distance = 2.5,
-                                })
-                                debugPrint("Ped Made For Shop "..tostring(k).." At Coords "..tostring(j.Coords))
-                            end
-                        else
-                            TargetZone["Shop"..k..d] =
-	                        exports['qb-target']:AddBoxZone("Shop"..k..d, j.Coords, 4.0, 4.0, {name = "Shop"..k..d,heading = j.Coords.w,debugPoly = Config.DebugPoly,minZ=j.Coords.z-2,maxZ=j.Coords.z+2,}, {
-	                        	options = {{icon = v.Icon,label = "Talk",action = function() OpenShopMenu(k,v.Products) end,},},
-	                        	distance = 2.5,
-	                        })
-                            debugPrint("BoxZone Made For Shop "..tostring(k).." At Coords "..tostring(j.Coords))
-                        end
-                        if j.ShowBlip then
-                            blip = AddBlipForCoord(j.Coords)
-                            SetBlipAsShortRange(blip, true)
-                            SetBlipSprite(blip, v.Blip.Sprite)
-                            SetBlipColour(blip, v.Blip.Colour)
-                            SetBlipScale(blip, 0.8)
-                            SetBlipDisplay(blip, 6)
-                            BeginTextCommandSetBlipName('STRING')
-                            if not Config.CombineBlips then
-                                if v.Blip.Label then AddTextComponentString(v.Blip.Label)
-                                else AddTextComponentString("Shop") end
-                            else
-                                AddTextComponentString("Shop")
-                            end
-                            EndTextCommandSetBlipName(blip)
-                        end
-                    end
-                end
-            end
-        end
+        CreateShopTargets(k, v)
     end
     for k,v in pairs(Config.VendingMachines) do
         if v.Enable then
@@ -117,7 +160,7 @@ function OpenVendingMachine(machine,products)
                 icon = ("nui://qb-inventory/html/images/%s.png"):format(v.name)
             }
         else
-            debugPrint("^2SAYER-SHOPS^7:Cannot Find ^4"..v.name.." ^7in ^4Shared/Items.lua")
+            debugPrint("^2TSS-SHOPS^7: Cannot find ^4"..v.name.." ^7in ^4Shared/Items.lua")
         end
     end
 
@@ -138,19 +181,6 @@ function OpenShopMenu(shop,products)
         return
     end
 
-    local items = {}
-    for _,prod in ipairs(Config.Products[products]) do
-        local itm = QBCore.Shared.Items[prod.name]
-        if itm then
-            items[#items+1] = {
-                name = prod.name,
-                label = itm.label,
-                price = prod.price,
-                icon = ("nui://qb-inventory/html/images/%s.png"):format(prod.name) -- or any URL/path you prefer
-            }
-        end
-    end
-
     local logoValue = nil
     local playerData = QBCore.Functions.GetPlayerData()
     local balances = {
@@ -169,19 +199,28 @@ function OpenShopMenu(shop,products)
         accounts[#accounts+1] = 'business'
     end
 
-    SendNUIMessage({
-        action = 'openShop',
-        payload = {
-            shopId = shop,
-            shopLabel = Config.Shops[shop].Label,
-            shopSubtitle = 'Browse items and checkout',
-            shopLogo = logoValue,
-            items = items,
-            balances = balances,
-            accounts = accounts,
-            defaultAccount = 'cash'
-        }
-    })
+    QBCore.Functions.TriggerCallback('tss-shops:GetShop', function(result)
+        if not result or result.ok ~= true then
+            SetNuiFocus(false, false)
+            QBCore.Functions.Notify(result and result.reason or 'Unable to open shop.', 'error')
+            return
+        end
+
+        SendNUIMessage({
+            action = 'openShop',
+            payload = {
+                shopId = shop,
+                shopLabel = Config.Shops[shop].Label,
+                shopSubtitle = 'Browse items and checkout',
+                shopLogo = logoValue,
+                items = result.items or {},
+                hasSellables = result.hasSellables == true,
+                balances = result.balances or balances,
+                accounts = accounts,
+                defaultAccount = 'cash'
+            }
+        })
+    end, shop)
 
 end
 
@@ -194,13 +233,13 @@ end)
 RegisterNUICallback('checkFunds', function(data, cb)
     local total = tonumber(data.total or 0)
     local account = data.account or 'cash'
-    QBCore.Functions.TriggerCallback('sayer-shops:CheckMoney', function(result)
+    QBCore.Functions.TriggerCallback('tss-shops:CheckMoney', function(result)
         cb(result or { ok = false, reason = 'Unable to check funds.' })
     end, total, account)
 end)
 
 RegisterNUICallback('purchaseBasket', function(data, cb)
-    QBCore.Functions.TriggerCallback('sayer-shops:PurchaseBasket', function(result)
+    QBCore.Functions.TriggerCallback('tss-shops:PurchaseBasket', function(result)
         cb(result or { ok = false, reason = 'Purchase failed.' })
     end, {
         shopId = data.shopId,
@@ -209,8 +248,18 @@ RegisterNUICallback('purchaseBasket', function(data, cb)
     })
 end)
 
+RegisterNUICallback('sellBasket', function(data, cb)
+    QBCore.Functions.TriggerCallback('tss-shops:SellBasket', function(result)
+        cb(result or { ok = false, reason = 'Sale failed.' })
+    end, {
+        shopId = data.shopId,
+        account = data.account,
+        items = data.items
+    })
+end)
+
 RegisterNUICallback('purchaseVendingItem', function(data, cb)
-    QBCore.Functions.TriggerCallback('sayer-shops:PurchaseVending', function(result)
+    QBCore.Functions.TriggerCallback('tss-shops:PurchaseVending', function(result)
         cb(result or { ok = false, reason = 'Purchase failed.' })
     end, {
         machineId = data.machineId,
@@ -218,11 +267,27 @@ RegisterNUICallback('purchaseVendingItem', function(data, cb)
     })
 end)
 
+RegisterNetEvent('tss-shops:client:RegisterShop', function(shop, shopData, products)
+    if not shop or type(shopData) ~= 'table' or type(products) ~= 'table' then
+        return
+    end
+
+    Config.Products[shopData.Products] = products
+    Config.Shops[shop] = shopData
+    CreateShopTargets(shop, shopData)
+end)
+
+RegisterNetEvent('tss-shops:client:OpenShop', function(shop)
+    OpenRegisteredShop(shop)
+end)
+
+exports('openShop', OpenRegisteredShop)
+
 
 function SellItem(item,amount,worth,acc)
     if not IsBusy then
         IsBusy = true
-        QBCore.Functions.Progressbar('sayer_shop_sell', 'Selling '..QBCore.Shared.Items[item].label, 2000, false, false, {
+        QBCore.Functions.Progressbar('tss_shop_sell', 'Selling '..QBCore.Shared.Items[item].label, 2000, false, false, {
             disableMovement = true,
             disableCarMovement = true,
             disableMouse = false,
@@ -231,7 +296,7 @@ function SellItem(item,amount,worth,acc)
             animDict = "mp_safehouselost@",
             anim = "package_dropoff",
             }, {}, {}, function() -- Success
-            TriggerServerEvent('sayer-shops:SellItem', item,amount,worth,acc)
+            TriggerServerEvent('tss-shops:SellItem', item,amount,worth,acc)
             TriggerEvent('animations:client:EmoteCommandStart', {"c"})
             ClearPedTasks(PlayerPedId())
             IsBusy = false
@@ -248,7 +313,7 @@ end
 function BuyItem(item,amount,worth,acc)
     if not IsBusy then
         IsBusy = true
-        QBCore.Functions.Progressbar('sayer_shop_buy', 'Buying '..QBCore.Shared.Items[item].label, 2000, false, false, {
+        QBCore.Functions.Progressbar('tss_shop_buy', 'Buying '..QBCore.Shared.Items[item].label, 2000, false, false, {
             disableMovement = true,
             disableCarMovement = true,
             disableMouse = false,
@@ -257,7 +322,7 @@ function BuyItem(item,amount,worth,acc)
             animDict = "mp_safehouselost@",
             anim = "package_dropoff",
             }, {}, {}, function() -- Success
-            TriggerServerEvent('sayer-shops:BuyItem', item,amount,worth,acc)
+            TriggerServerEvent('tss-shops:BuyItem', item,amount,worth,acc)
             TriggerEvent('animations:client:EmoteCommandStart', {"c"})
             ClearPedTasks(PlayerPedId())
             IsBusy = false
@@ -271,7 +336,7 @@ function BuyItem(item,amount,worth,acc)
     end
 end
 
-RegisterNetEvent('sayer-shops:ProcessItem', function(item, amount, worth, acc, job, gang, license, isBuying)
+RegisterNetEvent('tss-shops:ProcessItem', function(item, amount, worth, acc, job, gang, license, isBuying)
     local fullworth = math.ceil(worth * amount)
     local Job = QBCore.Functions.GetPlayerData().job.name
     debugPrint("Job = " .. Job)
@@ -338,7 +403,17 @@ end)
 --used to reset peds/zones when restarting script
 AddEventHandler('onResourceStop', function(t) if t ~= GetCurrentResourceName() then return end
 	for k in pairs(TargetZone) do exports['qb-target']:RemoveZone(k) end
-    for k in pairs(TargetPed) do exports['qb-target']:RemoveTargetEntity(k) end
+    for _,v in pairs(TargetPed) do
+        exports['qb-target']:RemoveTargetEntity(v)
+        if DoesEntityExist(v) then
+            DeleteEntity(v)
+        end
+    end
+    for _,v in pairs(TargetBlip) do
+        if DoesBlipExist(v) then
+            RemoveBlip(v)
+        end
+    end
     for _,v in pairs(VendMachine) do 
         if DoesEntityExist(v) then
             DeleteEntity(v) 

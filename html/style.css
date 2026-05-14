@@ -340,6 +340,27 @@ body.theme-light .row-item {
   font-size: 1.1rem;
 }
 
+.mode-tabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.mode-tab {
+  border: 1px solid rgba(9, 71, 113, 0.3);
+  background: rgba(14, 99, 156, 0.12);
+  color: var(--text);
+  padding: 6px 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.mode-tab:hover,
+.mode-tab.active {
+  background: color-mix(in srgb, var(--hover-blue) 46%, transparent);
+  border-color: rgba(9, 71, 113, 0.72);
+}
+
 .card {
   background: linear-gradient(165deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
   padding: 12px;
@@ -387,7 +408,7 @@ body.theme-light .vending-selection.card {
   flex-direction: column;
   gap: 8px;
   padding: 9px;
-  height: 340px;
+  height: 360px;
   overflow: hidden;
 }
 

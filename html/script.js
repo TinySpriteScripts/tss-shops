@@ -16,6 +16,8 @@ const state = {
   busy: false,
   vendingBusy: false,
   shopId: null,
+  mode: 'buy',
+  hasSellables: false,
   items: [],
   itemIndex: new Map(),
   basket: new Map(),
@@ -45,6 +47,9 @@ const el = {
   balBusiness: document.getElementById('bal-business'),
   businessRow: document.getElementById('business-row'),
   accountSelect: document.getElementById('account-select'),
+  catalogTitle: document.getElementById('catalog-title'),
+  basketTitle: document.getElementById('basket-title'),
+  modeTabs: document.getElementById('mode-tabs'),
   searchInput: document.getElementById('search-input'),
   sortSelect: document.getElementById('sort-select'),
   itemsGrid: document.getElementById('items-grid'),
@@ -89,6 +94,14 @@ function imageFor(item) {
   if (item.icon && item.icon.startsWith('nui://')) return item.icon;
   if (item.icon && (item.icon.endsWith('.png') || item.icon.includes('/'))) return item.icon;
   return `nui://qb-inventory/html/images/${item.name}.png`;
+}
+
+function currentPrice(item) {
+  return state.mode === 'sell' ? Number(item.sellPrice || 0) : Number(item.price || 0);
+}
+
+function stockText(stock) {
+  return stock === null || typeof stock === 'undefined' ? 'Unlimited stock' : `${Number(stock || 0)} in stock`;
 }
 
 function setStatus(message, type = 'info') {
@@ -148,7 +161,7 @@ function loadTheme() {
 
 function getBasketDraftKey() {
   if (!state.shopId) return null;
-  return `tss-shops-basket:${state.shopId}`;
+  return `tss-shops-basket:${state.shopId}:${state.mode}`;
 }
 
 function saveBasketDraft() {
@@ -180,11 +193,16 @@ function loadBasketDraft() {
     parsed.forEach((row) => {
       const item = state.itemIndex.get(row.name);
       if (!item) return;
-      const qty = clampQty(row.qty, 1);
+      if (state.mode === 'sell' && (!item.canSell || Number(item.sellPrice || 0) <= 0)) return;
+      const maxStock = state.mode === 'buy' && item.stock !== null && typeof item.stock !== 'undefined'
+        ? Math.max(0, Number(item.stock || 0))
+        : 999;
+      if (state.mode === 'buy' && maxStock <= 0) return;
+      const qty = Math.min(maxStock, clampQty(row.qty, 1));
       state.basket.set(item.name, {
         name: item.name,
         label: item.label,
-        price: item.price,
+        price: currentPrice(item),
         qty,
       });
     });
@@ -236,10 +254,10 @@ function sortItems(rows) {
     return sorted.sort((a, b) => b.label.localeCompare(a.label));
   }
   if (state.sort === 'price_asc') {
-    return sorted.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+    return sorted.sort((a, b) => currentPrice(a) - currentPrice(b));
   }
   if (state.sort === 'price_desc') {
-    return sorted.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+    return sorted.sort((a, b) => currentPrice(b) - currentPrice(a));
   }
   return sorted.sort((a, b) => a.label.localeCompare(b.label));
 }
@@ -249,7 +267,10 @@ function getVisibleItems() {
   const rows = query
     ? state.items.filter((item) => item.label.toLowerCase().includes(query) || item.name.toLowerCase().includes(query))
     : state.items;
-  return sortItems(rows);
+  const modeRows = state.mode === 'sell'
+    ? rows.filter((item) => item.canSell && Number(item.sellPrice || 0) > 0)
+    : rows;
+  return sortItems(modeRows);
 }
 
 function getBasketSummary() {
@@ -275,12 +296,15 @@ function updateSummaryUi() {
   if (!state.busy) {
     el.btnPurchase.disabled = summary.total <= 0;
   }
-  el.btnPurchase.textContent = summary.quantity > 0 ? `Purchase (${summary.quantity})` : 'Purchase';
+  const action = state.mode === 'sell' ? 'Sell' : 'Purchase';
+  el.btnPurchase.textContent = summary.quantity > 0 ? `${action} (${summary.quantity})` : action;
+  el.catalogTitle.textContent = state.mode === 'sell' ? 'Items To Sell' : 'Available Items';
+  el.basketTitle.textContent = state.mode === 'sell' ? 'Sell Basket' : 'Basket';
 
   if (summary.quantity > 0) {
-    el.shopMeta.textContent = `${summary.quantity} items ready to checkout`;
+    el.shopMeta.textContent = `${summary.quantity} items ready to ${state.mode === 'sell' ? 'sell' : 'checkout'}`;
   } else {
-    el.shopMeta.textContent = 'Basket is ready';
+    el.shopMeta.textContent = state.mode === 'sell' ? 'Sell basket is ready' : 'Basket is ready';
   }
 }
 
@@ -288,7 +312,11 @@ function setBasketQty(name, qty) {
   const row = state.basket.get(name);
   if (!row) return;
 
-  const nextQty = clampQty(qty, row.qty);
+  const item = state.itemIndex.get(name);
+  const maxStock = state.mode === 'buy' && item && item.stock !== null && typeof item.stock !== 'undefined'
+    ? Math.max(1, Number(item.stock || 0))
+    : 999;
+  const nextQty = Math.min(maxStock, clampQty(qty, row.qty));
   row.qty = nextQty;
   saveBasketDraft();
   renderBasket();
@@ -313,21 +341,29 @@ function clearBasket() {
 function addToBasket(item, qty) {
   const addQty = clampQty(qty, 1);
   const existing = state.basket.get(item.name);
+  const maxStock = state.mode === 'buy' && item.stock !== null && typeof item.stock !== 'undefined'
+    ? Math.max(0, Number(item.stock || 0))
+    : 999;
+
+  if (state.mode === 'buy' && maxStock <= 0) {
+    setStatus(`${item.label} is out of stock.`, 'error');
+    return;
+  }
 
   if (existing) {
-    existing.qty = clampQty(existing.qty + addQty, existing.qty);
+    existing.qty = Math.min(maxStock, clampQty(existing.qty + addQty, existing.qty));
   } else {
     state.basket.set(item.name, {
       name: item.name,
       label: item.label,
-      price: item.price,
-      qty: addQty,
+      price: currentPrice(item),
+      qty: Math.min(maxStock, addQty),
     });
   }
 
   saveBasketDraft();
   renderBasket();
-  setStatus(`${item.label} added to basket.`, 'ok');
+  setStatus(`${item.label} added to ${state.mode === 'sell' ? 'sell basket' : 'basket'}.`, 'ok');
 }
 
 function makeQtyControl(initial, onApply) {
@@ -403,7 +439,8 @@ function renderItems() {
     card.innerHTML = `
       <img class="item-thumb" src="${imageFor(item)}" alt="${title}" />
       <h3 class="item-title">${title}</h3>
-      <p class="item-price">${money(item.price)}</p>
+      <p class="item-price">${money(currentPrice(item))}</p>
+      <p class="item-sub">${state.mode === 'sell' ? 'Sell price' : stockText(item.stock)}</p>
     `;
 
     const qtyControl = makeQtyControl(1, (next) => {
@@ -416,7 +453,11 @@ function renderItems() {
     const addBtn = document.createElement('button');
     addBtn.className = 'add-btn';
     addBtn.type = 'button';
-    addBtn.textContent = 'Add';
+    addBtn.textContent = state.mode === 'sell' ? 'Sell' : 'Add';
+    if (state.mode === 'buy' && item.stock !== null && typeof item.stock !== 'undefined' && Number(item.stock || 0) <= 0) {
+      addBtn.disabled = true;
+      addBtn.textContent = 'Out of Stock';
+    }
     addBtn.addEventListener('click', () => {
       addToBasket(item, qtyInput.value);
       qtyInput.value = '1';
@@ -482,20 +523,50 @@ function renderBasket() {
   updateSummaryUi();
 }
 
+function setMode(mode) {
+  const nextMode = mode === 'sell' && state.hasSellables ? 'sell' : 'buy';
+  if (state.mode === nextMode) return;
+  clearBasket();
+  state.mode = nextMode;
+  el.modeTabs.querySelectorAll('.mode-tab').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.mode === state.mode);
+  });
+  loadBasketDraft();
+  renderItems();
+  renderBasket();
+  setStatus('');
+}
+
+function applyShopData(shop = {}) {
+  if (Array.isArray(shop.items)) {
+    state.items = shop.items.map((item) => ({
+      name: String(item.name || ''),
+      label: String(item.label || item.name || 'Item'),
+      price: Number(item.price || 0),
+      sellPrice: Number(item.sellPrice || 0),
+      canSell: item.canSell === true,
+      stock: item.stock === null || typeof item.stock === 'undefined' ? null : Number(item.stock || 0),
+      icon: item.icon || '',
+    }));
+
+    state.itemIndex.clear();
+    state.items.forEach((item) => state.itemIndex.set(item.name, item));
+  }
+
+  state.hasSellables = shop.hasSellables === true || state.items.some((item) => item.canSell);
+  el.modeTabs.classList.toggle('hidden', !state.hasSellables);
+}
+
 function openShop(payload = {}) {
   state.open = true;
   state.busy = false;
   state.shopId = payload.shopId || null;
+  state.mode = 'buy';
 
-  state.items = (payload.items || []).map((item) => ({
-    name: String(item.name || ''),
-    label: String(item.label || item.name || 'Item'),
-    price: Number(item.price || 0),
-    icon: item.icon || '',
-  }));
-
-  state.itemIndex.clear();
-  state.items.forEach((item) => state.itemIndex.set(item.name, item));
+  applyShopData(payload);
+  el.modeTabs.querySelectorAll('.mode-tab').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.mode === state.mode);
+  });
 
   state.accounts = Array.isArray(payload.accounts) && payload.accounts.length ? payload.accounts : ['cash', 'bank'];
 
@@ -644,6 +715,10 @@ async function purchaseVendingItem() {
 }
 
 function applyPurchaseResult(result = {}) {
+  if (result.shop) {
+    applyShopData(result.shop);
+  }
+
   const failed = Array.isArray(result.failed) ? result.failed : [];
   const failedByName = new Map();
   failed.forEach((row) => {
@@ -673,6 +748,14 @@ function applyPurchaseResult(result = {}) {
   renderBasket();
 }
 
+function applySellResult(result = {}) {
+  if (result.shop) {
+    applyShopData(result.shop);
+  }
+
+  clearBasket();
+}
+
 async function purchaseBasket() {
   if (state.busy || state.basket.size === 0) return;
 
@@ -687,6 +770,31 @@ async function purchaseBasket() {
   el.btnPurchase.disabled = true;
 
   try {
+    if (state.mode === 'sell') {
+      setStatus('Processing sale...');
+      const result = await nui('sellBasket', {
+        shopId: state.shopId,
+        account,
+        items,
+      });
+
+      if (!result || result.ok !== true) {
+        setStatus((result && result.reason) || 'Sale failed.', 'error');
+        setBalances(result || {});
+        return;
+      }
+
+      setBalances(result || {});
+      applySellResult(result);
+
+      if (result.partial) {
+        setStatus(result.reason || 'Some items could not be sold.', 'info');
+      } else {
+        setStatus(result.reason || 'Sale complete.', 'ok');
+      }
+      return;
+    }
+
     setStatus('Checking funds...');
     const check = await nui('checkFunds', { total: summary.total, account });
     if (!check || check.ok !== true) {
@@ -737,6 +845,12 @@ el.searchInput.addEventListener('input', (event) => {
 el.sortSelect.addEventListener('change', (event) => {
   state.sort = event.target.value || 'name_asc';
   renderItems();
+});
+
+el.modeTabs.addEventListener('click', (event) => {
+  const btn = event.target.closest('button[data-mode]');
+  if (!btn) return;
+  setMode(btn.dataset.mode);
 });
 
 el.accountSelect.addEventListener('click', (event) => {

@@ -64,7 +64,13 @@
       <main class="main">
         <section class="items-panel card">
           <div class="header-row">
-            <h2>Available Items</h2>
+            <div>
+              <h2 id="catalog-title">Available Items</h2>
+              <div id="mode-tabs" class="mode-tabs hidden">
+                <button class="mode-tab active" type="button" data-mode="buy">Buy</button>
+                <button class="mode-tab" type="button" data-mode="sell">Sell</button>
+              </div>
+            </div>
             <span id="items-count" class="pill">0 items</span>
           </div>
           <div id="items-grid" class="items-grid"></div>
@@ -72,7 +78,7 @@
 
         <aside class="basket-panel card">
           <div class="header-row basket-head">
-            <h2>Basket</h2>
+            <h2 id="basket-title">Basket</h2>
             <span id="basket-lines" class="pill">0 lines</span>
           </div>
           <div id="basket-list" class="basket-list"></div>
