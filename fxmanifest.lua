@@ -29,5 +29,15 @@ files {
 
 lua54 'yes'
 
+escrow_ignore {
+	'config.lua',
+	'client.lua',
+	'server.lua',
+	'Readme.md',
+    'html/*.html',
+    'html/*.js',
+    'html/*.css',
+}
+
 
 dependency 'jim_bridge'
